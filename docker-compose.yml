@@ -1,66 +1,53 @@
 version: '3.8'
 
 services:
-  # Next.js Application
-  app:
-    build: .
-    container_name: hrbooteh-app
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=hrbooteh_user
-      - DB_PASSWORD=hrbooteh_secure_password_2024
-      - DB_NAME=hrbooteh_db
-      - JWT_SECRET=hrbooteh_jwt_secret_key_very_secure_2024
-    depends_on:
-      - mysql
-    networks:
-      - hrbooteh-network
-    volumes:
-      - ./logs:/app/logs
-
-  # MySQL Database
+  # سرویس دیتابیس MySQL
   mysql:
     image: mysql:8.0
-    container_name: hrbooteh-mysql
+    container_name: mysql
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=hrbooteh_root_password_2024
-      - MYSQL_DATABASE=hrbooteh_db
-      - MYSQL_USER=hrbooteh_user
-      - MYSQL_PASSWORD=hrbooteh_secure_password_2024
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD} # این پسورد را از فایل .env.production می‌خواند
+      MYSQL_DATABASE: ${DB_NAME}         # این نام دیتابیس را از فایل .env.production می‌خواند
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database_setup.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-data:/var/lib/mysql
     networks:
-      - hrbooteh-network
-    command: --default-authentication-plugin=mysql_native_password
+      - app-network
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: hrbooteh-nginx
+  # سرویس اپلیکیشن Next.js
+  next-app:
+    container_name: next-app
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "3000:3000"
+    command: npm run dev  # <--- این خط طبق درخواست شما برای اجرا در حالت توسعه اضافه شده است
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
+      - .:/app # اتصال پوشه فعلی به پوشه /app در کانتینر برای دیدن تغییرات زنده
+      - /app/node_modules
+      - /app/.next
     depends_on:
-      - app
+      - mysql # اطمینان از اینکه دیتابیس قبل از اپلیکیشن اجرا شود
     networks:
-      - hrbooteh-network
+      - app-network
+    environment:
+      - DB_HOST=mysql # در شبکه داکر، نام سرویس به عنوان هاست شناخته می‌شود
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
-volumes:
-  mysql_data:
-
+# تعریف شبکه‌ی ارتباطی بین کانتینرها
 networks:
-  hrbooteh-network:
+  app-network:
     driver: bridge
+
+# تعریف والیوم برای نگهداری دائمی داده‌های دیتابیس
+volumes:
+  mysql-data:
+    driver: local

@@ -140,9 +140,10 @@ const MBTIResultsContent: React.FC = () => {
     return null;
   }
 
+  // کد اصلاح شده
   const personalityColors = getPersonalityColor(analysis.personality_type);
-  const PersonalityIcon = iconMap[getPersonalityIcon(analysis.personality_type)] || Star;
-
+  const iconName = getPersonalityIcon(analysis.personality_type) as keyof typeof iconMap;
+  const PersonalityIcon = iconMap[iconName] || Star;
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       <div className={`h-6 bg-gradient-to-r ${personalityColors.color}`}></div>

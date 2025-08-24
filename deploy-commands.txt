@@ -1,0 +1,37 @@
+🚀 Manual Deployment Commands for hrbooteh.com
+
+Server: 85.17.55.23
+Port: 6579
+Password: M83038303a
+
+=== STEP 1: Upload Files ===
+scp -P 6579 -r . root@85.17.55.23:/opt/hrbooteh/
+
+=== STEP 2: SSH to Server ===
+ssh root@85.17.55.23 -p 6579
+
+=== STEP 3: Run These Commands on Server ===
+cd /opt/hrbooteh
+apt update -y
+curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+systemctl start docker && systemctl enable docker
+curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+mkdir -p ssl logs
+docker-compose down 2>/dev/null || true
+docker-compose up -d --build
+sleep 30
+docker-compose ps
+
+=== STEP 4: Access Your Site ===
+http://85.17.55.23:3000
+
+=== Optional: Add SSL Later ===
+mkdir -p /opt/hrbooteh/ssl
+# Add certificates:
+# ssl/hrbooteh.com.crt
+# ssl/hrbooteh.com.key
+
+=== Update Google API Key ===
+nano /opt/hrbooteh/.env.production
+# Change: GOOGLE_API_KEY=your_actual_api_key_here

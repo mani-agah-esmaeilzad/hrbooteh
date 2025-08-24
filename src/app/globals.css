@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    --primary: 231 73% 28%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 210 17% 95%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 214 27% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 214 27% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 231 73% 28%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 220 70% 50%;
+
+    /* Executive Theme Colors */
+    --executive-navy: 231 73% 28%;
+    --executive-navy-light: 231 35% 45%;
+    --executive-navy-dark: 231 90% 15%;
+    --executive-gold: 39 97% 62%;
+    --executive-gold-light: 39 65% 85%;
+    --executive-silver: 216 12% 84%;
+    --executive-silver-dark: 216 33% 44%;
+    --executive-charcoal: 215 28% 17%;
+    --executive-charcoal-light: 214 13% 24%;
+    --executive-pearl: 0 0% 98%;
+    --executive-ash: 220 9% 46%;
+    --executive-ash-light: 220 13% 91%;
+    
+    /* Gradients */
+    --gradient-executive: linear-gradient(135deg, hsl(var(--executive-navy)), hsl(var(--executive-navy-light)));
+    --gradient-luxury: linear-gradient(135deg, hsl(var(--executive-charcoal)), hsl(var(--executive-navy)));
+    --gradient-elegant: linear-gradient(180deg, hsl(var(--executive-pearl)), hsl(var(--executive-silver)));
+    
+    /* Shadows */
+    --shadow-executive: 0 20px 25px -5px hsl(var(--executive-navy) / 0.1), 0 10px 10px -5px hsl(var(--executive-navy) / 0.04);
+    --shadow-luxury: 0 25px 50px -12px hsl(var(--executive-charcoal) / 0.25);
+    --shadow-subtle: 0 4px 6px -1px hsl(var(--executive-ash) / 0.1), 0 2px 4px -1px hsl(var(--executive-ash) / 0.06);
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border font-vazir;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Corporate scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--executive-ash));
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--executive-navy));
+}
+
+/* Professional transitions */
+* {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Corporate button press effect */
+.btn-press:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease-in-out;
+}
+
+/* Corporate animations */
+@keyframes slide-in-professional {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-corporate {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-professional {
+  animation: slide-in-professional 0.4s ease-out;
+}
+
+.animate-fade-in-corporate {
+  animation: fade-in-corporate 0.3s ease-out;
+}

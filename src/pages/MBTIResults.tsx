@@ -27,27 +27,26 @@ const MBTIResultsContent: React.FC = () => {
     if (savedAnalysis) {
       try {
         const rawAnalysis = JSON.parse(savedAnalysis);
-        
+
         // تبدیل فرمت قدیمی به جدید اگر لازم باشد
+        // کد اصلاح شده
         const normalizedAnalysis: MBTIAnalysisResult = {
           personality_type: rawAnalysis.personality_type || 'UNKNOWN',
           description: rawAnalysis.description || 'توضیحی در دسترس نیست',
+          type_name: rawAnalysis.type_name || 'نامشخص', // <-- این خط اضافه شده
+          famous_people: rawAnalysis.famous_people || [], // <-- این خط اضافه شده
+          detailedAnalysis: rawAnalysis.detailedAnalysis || {}, // <-- این خط اضافه شده
           E_I_score: rawAnalysis.E_I_score,
           S_N_score: rawAnalysis.S_N_score,
           T_F_score: rawAnalysis.T_F_score,
           P_J_score: rawAnalysis.P_J_score,
-          dimensions: rawAnalysis.dimensions || {
-            E_I: rawAnalysis.E_I_score || 0,
-            S_N: rawAnalysis.S_N_score || 0,
-            T_F: rawAnalysis.T_F_score || 0,
-            P_J: rawAnalysis.P_J_score || 0
-          },
-          strengths: rawAnalysis.strengths || [],
-          challenges: rawAnalysis.challenges || [],
-          development_areas: rawAnalysis.development_areas || rawAnalysis.challenges || [],
-          career_suggestions: rawAnalysis.career_suggestions || []
+          dimensions: rawAnalysis.dimensions,
+          strengths: rawAnalysis.strengths,
+          challenges: rawAnalysis.challenges,
+          development_areas: rawAnalysis.development_areas,
+          career_suggestions: rawAnalysis.career_suggestions,
         };
-        
+
         setAnalysis(normalizedAnalysis);
       } catch (error) {
         console.error('Error parsing saved analysis:', error);
@@ -219,7 +218,7 @@ const MBTIResultsContent: React.FC = () => {
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
+                  <div
                     className={`h-2 rounded-full ${score > 0 ? 'bg-blue-500' : 'bg-orange-500'}`}
                     style={{ width: `${Math.min(Math.abs(score) * 25, 100)}%` }}
                   ></div>

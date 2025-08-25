@@ -46,7 +46,7 @@ const IndependenceAssessment = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/assessment/start-independence', {
+      const response = await fetch('/api/assessment/start-independence', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const IndependenceAssessment = () => {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        await fetch('http://localhost:3001/api/auth/logout', {
+        await fetch('/api/auth/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

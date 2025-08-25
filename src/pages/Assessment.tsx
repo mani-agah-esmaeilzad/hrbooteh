@@ -270,7 +270,7 @@ const Assessment = () => {
       const token = localStorage.getItem('token');
       if (token) {
         // ارسال درخواست logout به سرور
-        await fetch('http://localhost:3001/api/auth/logout', {
+        await fetch('/api/auth/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -99,22 +99,20 @@ const Assessment = () => {
 
 
   const getEndpoints = (questionnaireId: any) => {
-    const baseUrl = 'http://localhost:3001';
-    
     if (!questionnaireId || isNaN(Number(questionnaireId))) {
       console.warn('Invalid questionnaireId:', questionnaireId);
-      return { start: `${baseUrl}/api/assessment/start-independence`, chat: `${baseUrl}/api/assessment/chat-independence` };
+      return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence` };
     }
     
     const id = Number(questionnaireId);
     
     switch (id) {
       case 1:
-        return { start: `${baseUrl}/api/assessment/start-independence`, chat: `${baseUrl}/api/assessment/chat-independence` };
+        return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence` };
       case 2:
-        return { start: `${baseUrl}/api/assessment/start-mbti`, chat: `${baseUrl}/api/assessment/chat-mbti` };
+        return { start: `/api/assessment/start-mbti`, chat: `/api/assessment/chat-mbti` };
       default:
-        return { start: `${baseUrl}/api/assessment/start-independence`, chat: `${baseUrl}/api/assessment/chat-independence` };
+        return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence` };
     }
   };
 

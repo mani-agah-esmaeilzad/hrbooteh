@@ -90,10 +90,9 @@ const IndependenceAssessment = () => {
   };
 
   const getEndpoints = () => {
-    const baseUrl = 'http://localhost:3001';
     return { 
-      start: `${baseUrl}/api/assessment/start-independence`, 
-      chat: `${baseUrl}/api/assessment/chat-independence` 
+      start: `/api/assessment/start-independence`, 
+      chat: `/api/assessment/chat-independence` 
     };
   };
 

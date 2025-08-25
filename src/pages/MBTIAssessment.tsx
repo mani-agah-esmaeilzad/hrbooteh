@@ -86,10 +86,9 @@ const MBTIAssessment = () => {
   };
 
   const getEndpoints = () => {
-    const baseUrl = 'http://localhost:3001';
     return { 
-      start: `${baseUrl}/api/assessment/start-mbti`, 
-      chat: `${baseUrl}/api/assessment/chat-mbti` 
+      start: `/api/assessment/start-mbti`, 
+      chat: `/api/assessment/chat-mbti` 
     };
   };
 

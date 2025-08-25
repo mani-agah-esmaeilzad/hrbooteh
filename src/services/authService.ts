@@ -1,6 +1,10 @@
 import { LoginInput, RegisterInput, ApiResponse } from '@/lib/validation';
 
+<<<<<<< Updated upstream
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+=======
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+>>>>>>> Stashed changes
 
 // تابع کمکی برای درخواست‌های API
 async function apiRequest<T>(

@@ -6,9 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Send, Shield, Users, MessageCircle, User, Briefcase, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useResponsive } from "@/hooks/useResponsive";
 import { toast } from 'sonner';
 
-import { useResponsive } from "@/hooks/useResponsive";
 interface LocalChatMessage {
   type: 'user' | 'ai1' | 'ai2';
   content: string;
@@ -24,12 +24,14 @@ interface Character {
   position: { x: number; y: number };
   color: string;
   mobilePosition?: { x: number; y: number };
+  currentMessage?: string;
+  messageVisible?: boolean;
 }
 
 const IndependenceAssessment = () => {
   const router = useRouter();
-  const { isMobile } = useResponsive();
   const { user } = useAuth();
+  const { isMobile } = useResponsive();
   const [messages, setMessages] = useState<LocalChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -38,8 +40,11 @@ const IndependenceAssessment = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
   const [recentSpeaker, setRecentSpeaker] = useState<string | null>(null);
-  const [pendingMessages, setPendingMessages] = useState<LocalChatMessage[]>([]);
   const [showingMessages, setShowingMessages] = useState(false);
+  
+  // State برای مدیریت نمایش پیام‌های شخصیت‌ها
+  const [characterMessages, setCharacterMessages] = useState<{[key: string]: string}>({});
+  const [visibleCharacters, setVisibleCharacters] = useState<{[key: string]: boolean}>({});
 
   // تعریف شخصیت‌های جلسه با موقعیت‌های ریسپانسیو
   const characters: Character[] = [
@@ -119,7 +124,10 @@ const IndependenceAssessment = () => {
             id: `initial-${index}`
           }));
           
-          // نمایش پیام‌ها با وقفه
+          // ذخیره پیام‌ها در state اصلی
+          setMessages(formattedMessages);
+          
+          // نمایش تدریجی پیام‌ها
           await showMessagesSequentially(formattedMessages);
         }
         
@@ -136,28 +144,45 @@ const IndependenceAssessment = () => {
     }
   };
 
-  // نمایش پیام‌ها با وقفه
+  // پاک کردن همه پیام‌های نمایشی
+  const clearAllVisibleMessages = () => {
+    setCharacterMessages({});
+    setVisibleCharacters({});
+    setRecentSpeaker(null);
+  };
+
+  // نمایش تدریجی پیام‌ها
   const showMessagesSequentially = async (newMessages: LocalChatMessage[]) => {
     setShowingMessages(true);
     
+    // پاک کردن پیام‌های قبلی
+    clearAllVisibleMessages();
+    
     for (let i = 0; i < newMessages.length; i++) {
       const msg = newMessages[i];
+      const characterName = msg.character || (msg.type === 'user' ? (user?.first_name || "شما") : 'سیستم');
       
-      // افزودن پیام با انیمیشن
-      setMessages(prev => [...prev, msg]);
-      setRecentSpeaker(msg.character || null);
+      // نمایش پیام برای شخصیت
+      setCharacterMessages(prev => ({
+        ...prev,
+        [characterName]: msg.content
+      }));
       
-      // صدای نوتیفیکیشن (اختیاری)
-      // new Audio('/notification.mp3').play().catch(() => {});
+      setVisibleCharacters(prev => ({
+        ...prev,
+        [characterName]: true
+      }));
       
-      // وقفه بین پیام‌ها (2 ثانیه برای خواندن)
+      setRecentSpeaker(characterName);
+      
+      // وقفه بین پیام‌ها (3 ثانیه برای خواندن راحت)
       if (i < newMessages.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
     
-    // پاک کردن recent speaker بعد از 3 ثانیه
-    setTimeout(() => setRecentSpeaker(null), 3000);
+    // پاک کردن recent speaker بعد از 2 ثانیه
+    setTimeout(() => setRecentSpeaker(null), 2000);
     setShowingMessages(false);
   };
 
@@ -199,7 +224,10 @@ const IndependenceAssessment = () => {
             id: `response-${Date.now()}-${index}`
           }));
           
-          // نمایش پیام‌های جدید با وقفه
+          // اضافه کردن پیام‌های جدید به لیست کلی
+          setMessages(prev => [...prev, ...newMessages]);
+          
+          // نمایش تدریجی پیام‌های جدید
           await showMessagesSequentially(newMessages);
         }
 
@@ -254,12 +282,28 @@ const IndependenceAssessment = () => {
       id: `user-${Date.now()}`
     };
     
+    // اضافه کردن پیام کاربر به لیست
     setMessages(prev => [...prev, userMessage]);
-    setRecentSpeaker(user?.first_name || "شما");
+    
+    // پاک کردن همه پیام‌های نمایشی قبل از ارسال
+    clearAllVisibleMessages();
+    
+    // نمایش پیام کاربر
+    const userName = user?.first_name || "شما";
+    setCharacterMessages(prev => ({
+      ...prev,
+      [userName]: messageToSend
+    }));
+    setVisibleCharacters(prev => ({
+      ...prev,
+      [userName]: true
+    }));
+    setRecentSpeaker(userName);
+    
     setIsTyping(true);
 
-    // پاک کردن recent speaker بعد از 3 ثانیه
-    setTimeout(() => setRecentSpeaker(null), 3000);
+    // پاک کردن recent speaker بعد از 2 ثانیه
+    setTimeout(() => setRecentSpeaker(null), 2000);
 
     await sendMessageToServer(messageToSend);
   };
@@ -297,19 +341,10 @@ const IndependenceAssessment = () => {
     }
   };
 
-  // دریافت آخرین پیام هر شخصیت
-  const getLatestMessageForCharacter = (characterName: string) => {
-    const characterMessages = messages.filter(msg => 
-      msg.character === characterName || 
-      (msg.type === 'user' && characterName === (user?.first_name || "شما"))
-    );
-    return characterMessages[characterMessages.length - 1]?.content || '';
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen meeting-room flex items-center justify-center px-4">
-        <div className="text-center animate-slideIn max-w-md w-full">
+        <div className="text-center animate-slideIn max-w-md w-full loading-container">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse character-avatar">
             <Briefcase className="w-10 h-10 text-white" />
           </div>
@@ -382,12 +417,17 @@ const IndependenceAssessment = () => {
           <div className="text-center mb-4 md:mb-8 animate-fadeIn">
             <h2 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">🏢 اتاق کنفرانس شرکت</h2>
             <p className="text-slate-300 text-sm md:text-lg">شما در جلسه‌ای برای بررسی پروژه مهم شرکت حضور دارید</p>
+            {showingMessages && (
+              <div className="mt-2 text-blue-400 text-sm animate-pulse">
+                🗣️ در حال نمایش صحبت‌های جلسه...
+              </div>
+            )}
           </div>
 
           {/* Meeting Table */}
           <div 
             className="relative meeting-room rounded-2xl md:rounded-3xl shadow-2xl border border-slate-500/30 overflow-hidden animate-slideIn" 
-            style={{ height: '400px', minHeight: '350px' }}
+            style={{ height: isMobile ? '350px' : '500px', minHeight: '300px' }}
           >
             
             {/* Table Surface */}
@@ -401,9 +441,11 @@ const IndependenceAssessment = () => {
 
             {/* Characters around the table */}
             {characters.map((character, index) => {
-              const currentMsg = getLatestMessageForCharacter(character.name);
-              const isUserCharacter = character.name === (user?.first_name || "شما");
-              const isRecentSpeaker = recentSpeaker === character.name;
+              const characterName = character.name;
+              const currentMsg = characterMessages[characterName] || '';
+              const isVisible = visibleCharacters[characterName] || false;
+              const isUserCharacter = characterName === (user?.first_name || "شما");
+              const isRecentSpeaker = recentSpeaker === characterName;
               
               // استفاده از موقعیت موبایل در صفحات کوچک
               const position = isMobile ? character.mobilePosition || character.position : character.position;
@@ -418,31 +460,31 @@ const IndependenceAssessment = () => {
                     animationDelay: `${index * 0.2}s`
                   }}
                 >
-                  {/* Speech bubble - بزرگتر و واضح‌تر */}
-                  {currentMsg && (
-                    <div className="absolute bottom-full mb-3 md:mb-6 left-1/2 transform -translate-x-1/2 animate-slideIn z-10">
-                      <div className="speech-bubble-enhanced animate-messagePopIn">
+                  {/* Speech bubble - فقط وقتی پیام داره و مشاهده شده باشه */}
+                  {currentMsg && isVisible && (
+                    <div className="absolute bottom-full mb-3 md:mb-6 left-1/2 transform -translate-x-1/2 animate-messagePopIn z-10">
+                      <div className="speech-bubble-enhanced">
                         <p className="text-slate-800 text-sm md:text-base leading-relaxed font-medium break-words">
                           {currentMsg}
                         </p>
                         {/* Character name badge */}
                         <div className="absolute -top-2 left-2 md:left-3 bg-slate-700 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
-                          {character.name}
+                          {characterName}
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Character Avatar - ریسپانسیو */}
-                  <div className={`relative group character-avatar ${isUserCharacter ? 'ring-2 md:ring-4 ring-orange-400/60' : ''} ${isRecentSpeaker ? 'animate-pulse' : ''}`}>
-                    <div className={`w-16 h-16 md:w-24 md:h-24 bg-gradient-to-br ${character.color} rounded-full shadow-2xl flex items-center justify-center text-xl md:text-3xl border-2 md:border-4 border-white/20 ${isRecentSpeaker ? 'ring-2 md:ring-4 ring-blue-400 ring-opacity-75' : ''}`}>
+                  <div className={`relative group character-avatar transition-enhanced ${isUserCharacter ? 'ring-2 md:ring-4 ring-orange-400/60' : ''} ${isRecentSpeaker ? 'character-speaking' : ''}`}>
+                    <div className={`w-12 h-12 md:w-24 md:h-24 bg-gradient-to-br ${character.color} rounded-full shadow-2xl flex items-center justify-center text-lg md:text-3xl border-2 md:border-4 border-white/20`}>
                       {character.avatar}
                     </div>
                     
                     {/* Character Info */}
                     <div className="absolute top-full mt-2 md:mt-3 left-1/2 transform -translate-x-1/2 text-center min-w-max">
                       <p className="text-white font-bold text-xs md:text-sm bg-slate-800/80 px-2 md:px-3 py-1 rounded-full border border-slate-600/50">
-                        {character.name}
+                        {characterName}
                       </p>
                       <p className="text-slate-300 text-xs mt-1 hidden md:block">{character.role}</p>
                     </div>
@@ -497,12 +539,15 @@ const IndependenceAssessment = () => {
                   className="bg-slate-700/60 border-slate-600 text-white placeholder-slate-400 focus-enhanced min-h-[80px] md:min-h-[100px] resize-none text-sm md:text-base shadow-inner"
                   disabled={isTyping || showingMessages}
                 />
+                {showingMessages && (
+                  <p className="text-blue-400 text-xs mt-2">⏳ لطفاً تا پایان نمایش پیام‌ها صبر کنید...</p>
+                )}
               </div>
               <div className="flex flex-col justify-end">
                 <Button
                   onClick={handleSendMessage}
                   disabled={!currentMessage.trim() || isTyping || showingMessages}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl shadow-lg h-fit transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm md:text-base w-full md:w-auto"
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl shadow-lg h-fit transition-enhanced disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base w-full md:w-auto"
                 >
                   <Send className="w-4 h-4 md:w-5 md:h-5 ml-2" />
                   {isTyping ? 'در حال ارسال...' : showingMessages ? 'در حال نمایش...' : 'صحبت کنید'}
@@ -515,7 +560,7 @@ const IndependenceAssessment = () => {
           <div className="mt-4 md:mt-6 bg-slate-800/40 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-slate-600/30 max-h-32 md:max-h-40 overflow-y-auto animate-fadeIn">
             <h3 className="text-white font-semibold mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
               <MessageCircle className="w-3 h-3 md:w-4 md:h-4" />
-              تاریخچه صحبت‌های جلسه
+              تاریخچه کامل جلسه
             </h3>
             <div className="space-y-1 md:space-y-2">
               {messages.slice(-5).map((message, index) => (

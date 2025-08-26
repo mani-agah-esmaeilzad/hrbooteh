@@ -5,8 +5,8 @@
   "devFiles": [],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/4sNk6if2sWQ9x1bsl61EB/_buildManifest.js",
-    "static/4sNk6if2sWQ9x1bsl61EB/_ssgManifest.js"
+    "static/Xgm4bteZ_udpkudKzlwR8/_buildManifest.js",
+    "static/Xgm4bteZ_udpkudKzlwR8/_ssgManifest.js"
   ],
   "rootMainFiles": [
     "static/chunks/webpack-82cc2edf8b3a7318.js",
@@ -41,7 +41,7 @@
       "static/chunks/110-22118714c0acd3a3.js",
       "static/chunks/332-254d1db55b4b6632.js",
       "static/chunks/712-180a3cef5d80a805.js",
-      "static/chunks/pages/IndependenceAssessment-f6872d315a0d4eb8.js"
+      "static/chunks/pages/IndependenceAssessment-d31fc332612d0111.js"
     ],
     "/Index": [
       "static/chunks/webpack-82cc2edf8b3a7318.js",

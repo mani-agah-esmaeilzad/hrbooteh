@@ -1,14 +1,14 @@
 {
   "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
   "/APIConfig": "pages/APIConfig.js",
+  "/_error": "pages/_error.js",
   "/Assessment": "pages/Assessment.js",
-  "/Index": "pages/Index.js",
   "/IndependenceAssessment": "pages/IndependenceAssessment.js",
+  "/Index": "pages/Index.js",
   "/Login": "pages/Login.js",
-  "/MBTIAssessment": "pages/MBTIAssessment.js",
-  "/MBTIResults": "pages/MBTIResults.js",
   "/NotFound": "pages/NotFound.js",
+  "/MBTIResults": "pages/MBTIResults.js",
+  "/MBTIAssessment": "pages/MBTIAssessment.js",
   "/Register": "pages/Register.js",
   "/Results": "pages/Results.js",
   "/_document": "pages/_document.js"

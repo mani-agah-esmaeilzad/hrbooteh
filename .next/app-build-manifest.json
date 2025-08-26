@@ -1,5 +1,28 @@
 {
   "pages": {
+    "/api-config/page": [
+      "static/chunks/webpack-82cc2edf8b3a7318.js",
+      "static/chunks/fd9d1056-eabcefd8a17f0848.js",
+      "static/chunks/117-be13397a6d21c2a2.js",
+      "static/chunks/main-app-c5b8692c1e8ca694.js",
+      "static/chunks/569-fc991ec1173f177a.js",
+      "static/chunks/438-8d8cb67769d94689.js",
+      "static/chunks/895-57f75756a1466d74.js",
+      "static/chunks/795-1f3c8700e0b6341a.js",
+      "static/chunks/app/api-config/page-db26aebbcfcbf4db.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack-82cc2edf8b3a7318.js",
+      "static/chunks/fd9d1056-eabcefd8a17f0848.js",
+      "static/chunks/117-be13397a6d21c2a2.js",
+      "static/chunks/main-app-c5b8692c1e8ca694.js",
+      "static/css/275ed64cc4367444.css",
+      "static/css/5013f4e388fca12d.css",
+      "static/chunks/569-fc991ec1173f177a.js",
+      "static/chunks/895-57f75756a1466d74.js",
+      "static/chunks/953-a4d57a528463f664.js",
+      "static/chunks/app/layout-1c38696ab19b1bc0.js"
+    ],
     "/not-found": [
       "static/chunks/webpack-82cc2edf8b3a7318.js",
       "static/chunks/fd9d1056-eabcefd8a17f0848.js",
@@ -13,29 +36,6 @@
       "static/chunks/117-be13397a6d21c2a2.js",
       "static/chunks/main-app-c5b8692c1e8ca694.js",
       "static/chunks/app/_not-found/page-c1bbe1b4bc8170a6.js"
-    ],
-    "/layout": [
-      "static/chunks/webpack-82cc2edf8b3a7318.js",
-      "static/chunks/fd9d1056-eabcefd8a17f0848.js",
-      "static/chunks/117-be13397a6d21c2a2.js",
-      "static/chunks/main-app-c5b8692c1e8ca694.js",
-      "static/css/275ed64cc4367444.css",
-      "static/css/413b3564d3f54d29.css",
-      "static/chunks/569-fc991ec1173f177a.js",
-      "static/chunks/895-57f75756a1466d74.js",
-      "static/chunks/953-a4d57a528463f664.js",
-      "static/chunks/app/layout-1c38696ab19b1bc0.js"
-    ],
-    "/api-config/page": [
-      "static/chunks/webpack-82cc2edf8b3a7318.js",
-      "static/chunks/fd9d1056-eabcefd8a17f0848.js",
-      "static/chunks/117-be13397a6d21c2a2.js",
-      "static/chunks/main-app-c5b8692c1e8ca694.js",
-      "static/chunks/569-fc991ec1173f177a.js",
-      "static/chunks/438-8d8cb67769d94689.js",
-      "static/chunks/895-57f75756a1466d74.js",
-      "static/chunks/795-1f3c8700e0b6341a.js",
-      "static/chunks/app/api-config/page-db26aebbcfcbf4db.js"
     ],
     "/assessment/page": [
       "static/chunks/webpack-82cc2edf8b3a7318.js",
@@ -63,7 +63,7 @@
       "static/chunks/main-app-c5b8692c1e8ca694.js",
       "static/chunks/569-fc991ec1173f177a.js",
       "static/chunks/438-8d8cb67769d94689.js",
-      "static/chunks/app/independence/page-168f5b2bc198c397.js"
+      "static/chunks/app/independence/page-0e5dc731e48b46c1.js"
     ],
     "/mbti-results/page": [
       "static/chunks/webpack-82cc2edf8b3a7318.js",
@@ -72,6 +72,15 @@
       "static/chunks/main-app-c5b8692c1e8ca694.js",
       "static/chunks/569-fc991ec1173f177a.js",
       "static/chunks/app/mbti-results/page-9a2ecbd58ab0e663.js"
+    ],
+    "/mbti/page": [
+      "static/chunks/webpack-82cc2edf8b3a7318.js",
+      "static/chunks/fd9d1056-eabcefd8a17f0848.js",
+      "static/chunks/117-be13397a6d21c2a2.js",
+      "static/chunks/main-app-c5b8692c1e8ca694.js",
+      "static/chunks/569-fc991ec1173f177a.js",
+      "static/chunks/438-8d8cb67769d94689.js",
+      "static/chunks/app/mbti/page-0a436be6510fd78b.js"
     ],
     "/page": [
       "static/chunks/webpack-82cc2edf8b3a7318.js",
@@ -90,15 +99,6 @@
       "static/chunks/569-fc991ec1173f177a.js",
       "static/chunks/438-8d8cb67769d94689.js",
       "static/chunks/app/register/page-6903ba1d0c525b0e.js"
-    ],
-    "/mbti/page": [
-      "static/chunks/webpack-82cc2edf8b3a7318.js",
-      "static/chunks/fd9d1056-eabcefd8a17f0848.js",
-      "static/chunks/117-be13397a6d21c2a2.js",
-      "static/chunks/main-app-c5b8692c1e8ca694.js",
-      "static/chunks/569-fc991ec1173f177a.js",
-      "static/chunks/438-8d8cb67769d94689.js",
-      "static/chunks/app/mbti/page-0a436be6510fd78b.js"
     ],
     "/results/page": [
       "static/chunks/webpack-82cc2edf8b3a7318.js",

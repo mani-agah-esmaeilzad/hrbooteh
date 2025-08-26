@@ -1,15 +1,15 @@
 {
-  "/_app": "pages/_app.js",
   "/APIConfig": "pages/APIConfig.js",
   "/_error": "pages/_error.js",
   "/Assessment": "pages/Assessment.js",
-  "/IndependenceAssessment": "pages/IndependenceAssessment.js",
   "/Index": "pages/Index.js",
+  "/IndependenceAssessment": "pages/IndependenceAssessment.js",
   "/Login": "pages/Login.js",
   "/NotFound": "pages/NotFound.js",
   "/MBTIResults": "pages/MBTIResults.js",
-  "/MBTIAssessment": "pages/MBTIAssessment.js",
   "/Register": "pages/Register.js",
+  "/_app": "pages/_app.js",
   "/Results": "pages/Results.js",
+  "/MBTIAssessment": "pages/MBTIAssessment.js",
   "/_document": "pages/_document.js"
 }

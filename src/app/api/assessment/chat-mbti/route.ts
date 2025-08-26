@@ -67,7 +67,20 @@ export async function POST(request: NextRequest) {
       }
 
       const stateData = stateRows[0] as any;
-      const currentState = JSON.parse(stateData.state_data);
+      // اصلاح مشکل parsing
+      let currentState;
+      try {
+        currentState = typeof stateData.state_data === 'string' 
+          ? JSON.parse(stateData.state_data)
+          : stateData.state_data;
+      } catch (parseError) {
+        console.error('Error parsing state_data:', parseError);
+        console.log('Raw state_data:', stateData.state_data);
+        return NextResponse.json(
+          { success: false, message: 'خطا در خواندن وضعیت ارزیابی' },
+          { status: 500 }
+        );
+      }
 
       // دریافت اطلاعات ارزیابی
       const [assessments] = await connection.execute(
@@ -97,7 +110,6 @@ export async function POST(request: NextRequest) {
       
       if (currentState.current_part >= mbtiData.scenario_parts.length) {
         // پایان آزمون - تحلیل نهایی
-        // جمع‌آوری پاسخ‌های کاربر برای تحلیل نهایی
         const [userAnswers] = await connection.execute(
           'SELECT content FROM chat_messages WHERE assessment_id = ? AND message_type = "user" ORDER BY created_at ASC',
           [assessmentId]
@@ -106,11 +118,6 @@ export async function POST(request: NextRequest) {
         const responses = Array.isArray(userAnswers) ? userAnswers.map((answer: any) => answer.content) : [];
         
         console.log('MBTI Analysis - User responses count:', responses.length);
-        console.log('MBTI Analysis - Responses:', responses);
-        
-        if (responses.length !== 12) {
-          throw new Error(`تعداد پاسخ‌های کاربر ${responses.length} است، اما باید دقیقاً 12 پاسخ باشد`);
-        }
         
         const finalAnalysis = analyzeMBTIResponses(responses);
         
@@ -148,7 +155,7 @@ export async function POST(request: NextRequest) {
           }
         });
       } else {
-        // تحلیل پاسخ کاربر برای بعد فعلی - ساده‌سازی شده
+        // تحلیل پاسخ کاربر برای بعد فعلی
         const analysisResults = [{ dimension: currentScenario.dimensions_to_analyze[0], score: 1, reasoning: 'پاسخ کاربر ثبت شد' }];
         
         // به‌روزرسانی امتیازات
@@ -179,7 +186,6 @@ export async function POST(request: NextRequest) {
         const responseMessages = [];
         
         console.log('Next scenario check - current_part:', currentState.current_part, 'total scenarios:', mbtiData.scenario_parts.length);
-        console.log('Next scenario exists:', !!nextScenario);
         
         if (nextScenario) {
           // پیام سیستم برای بخش بعدی
@@ -226,10 +232,7 @@ export async function POST(request: NextRequest) {
             timestamp: questionMessageData.created_at
           });
         } else {
-          // اگر سناریو بعدی وجود ندارد، باید تحلیل نهایی انجام شود
-          console.log('No next scenario - triggering final analysis');
-          
-          // جمع‌آوری پاسخ‌های کاربر برای تحلیل نهایی
+          // پایان آزمون - تحلیل نهایی
           const [userAnswers] = await connection.execute(
             'SELECT content FROM chat_messages WHERE assessment_id = ? AND message_type = "user" ORDER BY created_at ASC',
             [assessmentId]
@@ -238,11 +241,6 @@ export async function POST(request: NextRequest) {
           const responses = Array.isArray(userAnswers) ? userAnswers.map((answer: any) => answer.content) : [];
           
           console.log('Final analysis - User responses count:', responses.length);
-          console.log('Final analysis - Responses:', responses);
-          
-          if (responses.length !== 4) {
-            throw new Error(`تعداد پاسخ‌های کاربر ${responses.length} است، اما باید دقیقاً 4 پاسخ باشد`);
-          }
           
           const finalAnalysis = analyzeMBTIResponses(responses);
           
@@ -265,12 +263,6 @@ export async function POST(request: NextRequest) {
             [finalMessage.assessment_id, userId, finalMessage.message_type, finalMessage.content, finalMessage.character, finalMessage.created_at]
           );
           
-          // ذخیره نتایج در localStorage برای صفحه نتایج
-          const resultsData = {
-            analysis: finalAnalysis,
-            redirect: '/mbti-results'
-          };
-
           return NextResponse.json({
             success: true,
             message: 'آزمون تکمیل شد',
@@ -298,7 +290,6 @@ export async function POST(request: NextRequest) {
             current_part: currentState.current_part
           }
         });
-
       }
     } catch (dbError) {
       console.error('Database error:', dbError);

@@ -137,11 +137,26 @@ const IndependenceAssessment = () => {
           setMessages(prev => [...prev, ...newMessages]);
         }
 
-        if (data.data.type === "assessment_complete") {
+        // بررسی تکمیل ارزیابی
+        if (data.data.type === "assessment_complete" || data.message === 'ارزیابی تکمیل شد') {
           toast.success("ارزیابی استقلال تکمیل شد!");
+          
+          // ذخیره نتایج در localStorage برای صفحه نتایج
+          if (data.data.analysis || data.data) {
+            localStorage.setItem('independence_results', JSON.stringify({
+              assessment_id: sessionId,
+              final_analysis: data.data.analysis || data.data,
+              completed_at: new Date().toISOString(),
+              questionnaire_type: 'independence'
+            }));
+          }
+          
+          // هدایت به صفحه نتایج بعد از 2 ثانیه
           setTimeout(() => {
-            router.push('/');
-          }, 3000);
+            router.push('/results');
+          }, 2000);
+          
+          return; // خروج از تابع تا پردازش ادامه پیدا نکند
         }
       } else {
         throw new Error(data.message || 'خطا در ارسال پیام');

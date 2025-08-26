@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Brain, Target, TrendingUp, Users, ArrowRight, Home, Star, Award, BarChart3, ArrowLeft, Share2, Download } from 'lucide-react';
 import { MBTIAnalysisResult } from '@/lib/mbti-analysis';

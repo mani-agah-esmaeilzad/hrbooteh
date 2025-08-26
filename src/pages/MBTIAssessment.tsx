@@ -144,7 +144,7 @@ const MBTIAssessment = () => {
           } else {
             toast.success("آزمون MBTI تکمیل شد!");
             setTimeout(() => {
-              router.push('/');
+              router.push('/mbti-results');
             }, 3000);
           }
         }
@@ -206,13 +206,13 @@ const MBTIAssessment = () => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       toast.success('خروج موفقیت‌آمیز بود');
-      router.push('/');
+      router.push('/mbti-results');
     } catch (error) {
       console.error('Logout error:', error);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       toast.success('خروج انجام شد');
-      router.push('/');
+      router.push('/mbti-results');
     }
   };
 

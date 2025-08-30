@@ -1,15 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/APIConfig": "pages/APIConfig.js",
-  "/_error": "pages/_error.js",
-  "/Assessment": "pages/Assessment.js",
-  "/Index": "pages/Index.js",
-  "/Login": "pages/Login.js",
-  "/IndependenceAssessment": "pages/IndependenceAssessment.js",
-  "/MBTIAssessment": "pages/MBTIAssessment.js",
-  "/MBTIResults": "pages/MBTIResults.js",
-  "/Register": "pages/Register.js",
-  "/NotFound": "pages/NotFound.js",
-  "/Results": "pages/Results.js",
-  "/_document": "pages/_document.js"
-}
+{}

@@ -10,10 +10,9 @@ import { toast } from 'sonner';
 import ChatCharacter from '@/components/ChatCharacter';
 
 interface LocalChatMessage {
-  type: 'user' | 'ai1' | 'ai2';
+  type: 'user' | 'ai';
   content: string;
   timestamp: Date;
-  character?: string;
 }
 
 const Assessment = () => {
@@ -24,7 +23,6 @@ const Assessment = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
-  const [aiCharacters, setAiCharacters] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -67,22 +65,13 @@ const Assessment = () => {
         setSessionId(data.session_id);
       }
 
-      // اضافه کردن دیالوگ‌های اولیه به messages
       if (data.data?.messages && Array.isArray(data.data.messages)) {
         const initialMessages: LocalChatMessage[] = data.data.messages.map((msg: any) => ({
-          type: 'ai1',
+          type: 'ai',
           content: msg.content,
           timestamp: new Date(),
-          character: msg.character
         }));
-        
         setMessages(initialMessages);
-        
-        // تنظیم aiCharacters
-        const incomingCharacters = Array.from(new Set(data.data.messages.map((msg: any) => msg.character).filter(Boolean))) as string[];
-        if (incomingCharacters.length >= 2) {
-          setAiCharacters(incomingCharacters.slice(0, 2));
-        }
       }
 
       setLoading(false);
@@ -96,7 +85,6 @@ const Assessment = () => {
       setLoading(false);
     }
   };
-
 
   const getEndpoints = (questionnaireId: any) => {
     if (!questionnaireId || isNaN(Number(questionnaireId))) {
@@ -121,72 +109,51 @@ const Assessment = () => {
   }, [messages]);
 
   useEffect(() => {
-    console.log('Assessment useEffect triggered:', { user: !!user, currentQuestionnaire, assessmentStarted });
     if (!user || !currentQuestionnaire || typeof currentQuestionnaire !== 'number') return;
     if (assessmentStarted || hasStartedAssessment.current) return;
 
     hasStartedAssessment.current = true;
     startChatSession();
 
-    // Cleanup function
     return () => {
       hasStartedAssessment.current = false;
     };
-  }, [user?.id, currentQuestionnaire]); // حذف assessmentStarted از dependency
+  }, [user?.id, currentQuestionnaire]);
 
   const handleAiResponse = (data: any) => {
     const responseData = data.data || data;
 
     if (responseData.analysis) {
+      // Store results in localStorage before navigating
+      localStorage.setItem('independence_results', JSON.stringify(responseData.analysis));
       toast.info('ارزیابی تکمیل شد!');
       router.push('/results');
       return;
     }
 
     if (Array.isArray(responseData.messages) && responseData.messages.length > 0) {
-      let currentAiChars = aiCharacters;
-      if (currentAiChars.length === 0) {
-        const incomingCharacters = Array.from(new Set(responseData.messages.map((msg: any) => msg.character).filter(Boolean))) as string[];
-        if (incomingCharacters.length >= 2) {
-          setAiCharacters(incomingCharacters.slice(0, 2));
-          currentAiChars = incomingCharacters.slice(0, 2);
-        }
-      }
-
-      let tempMessages: LocalChatMessage[] = [];
-      responseData.messages.forEach((msg: any) => {
-        let messageType: 'ai1' | 'ai2' = 'ai1';
-        if (currentAiChars.length >= 2) {
-          messageType = msg.character === currentAiChars[1] ? 'ai2' : 'ai1';
-        }
-        const aiMessage: LocalChatMessage = {
-          type: messageType,
-          content: msg.content,
-          timestamp: new Date(),
-          character: msg.character
-        };
-        tempMessages.push(aiMessage);
-      });
+      const newAiMessages: LocalChatMessage[] = responseData.messages.map((msg: any) => ({
+        type: 'ai',
+        content: msg.content,
+        timestamp: new Date(),
+      }));
 
       let delay = 0;
-      tempMessages.forEach((msg, i) => {
+      newAiMessages.forEach((msg, i) => {
         setTimeout(() => {
-          setMessages((prev) => {
-            if (prev.some(p => p.content === msg.content && p.type === msg.type)) return prev;
-            return [...prev, msg];
-          });
-          if (i === tempMessages.length - 1) {
+          setMessages((prev) => [...prev, msg]);
+          if (i === newAiMessages.length - 1) {
             setIsTyping(false);
           }
         }, delay);
         delay += 1500;
       });
-    } else if (responseData.message) { // Handle simple chat response
+
+    } else if (responseData.message) {
       const aiMessage: LocalChatMessage = {
-        type: 'ai1',
+        type: 'ai',
         content: responseData.message,
         timestamp: new Date(),
-        character: 'AI'
       };
       setMessages(prev => [...prev, aiMessage]);
       setIsTyping(false);
@@ -367,12 +334,10 @@ const Assessment = () => {
               <div>
                 <h1 className="text-sm font-bold text-executive-charcoal">جلسه تعاملی - پرسشنامه {currentQuestionnaire}</h1>
                 <div className="flex items-center gap-2 text-xs">
-                  {aiCharacters.map((char, i) => (
-                    <div key={i} className={`flex items-center gap-1 ${i === 0 ? 'text-blue-600' : 'text-green-600'}`}>
-                      <div className={`w-2 h-2 rounded-full ${isConnected ? (i === 0 ? 'bg-blue-500' : 'bg-green-500') : 'bg-gray-400'} animate-pulse`} />
-                      <span className="font-medium">{char}</span>
+                    <div className={`flex items-center gap-1 text-blue-600'`}>
+                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-blue-500' : 'bg-gray-400'} animate-pulse`} />
+                      <span className="font-medium">دستیار هوش مصنوعی</span>
                     </div>
-                  ))}
                 </div>
               </div>
             </div>
@@ -400,23 +365,15 @@ const Assessment = () => {
          <div className="max-w-full mx-auto space-y-3">
            {messages.map((msg, i) => (
              <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-               {msg.type !== 'user' ? (
+               {msg.type === 'ai' ? (
                  <div className="flex items-start gap-2 max-w-[85%]">
                    <div className="flex-shrink-0 mt-1">
                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-executive-navy flex items-center justify-center text-white text-xs font-bold shadow-md">
-                       {msg.character?.charAt(0).toUpperCase() ?? 'A'}
+                       {'A'}
                      </div>
                    </div>
                    <div className="flex flex-col">
-                     {msg.character && (
-                       <span className="text-xs font-semibold text-executive-charcoal bg-white/80 px-2 py-0.5 rounded-full border border-executive-ash-light/40 mb-1 self-start">
-                         {msg.character}
-                       </span>
-                     )}
-                     <div className={`rounded-2xl p-3 shadow-sm ${msg.type === 'ai1'
-                       ? 'bg-gradient-to-br from-blue-50 to-blue-100/60 border border-blue-200/60 rounded-bl-md'
-                       : 'bg-gradient-to-br from-green-50 to-green-100/60 border border-green-200/60 rounded-bl-md'
-                       }`}>
+                     <div className={`rounded-2xl p-3 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/60 border border-blue-200/60 rounded-bl-md'`}>
                        <p className="text-sm leading-relaxed whitespace-pre-line text-executive-charcoal">
                          {msg.content}
                        </p>
@@ -443,7 +400,9 @@ const Assessment = () => {
              <div className="flex justify-start mb-4">
                <div className="flex items-start gap-2 max-w-[85%]">
                  <div className="w-4 h-4 flex-shrink-0 mt-1">
-                   <ChatCharacter type="ai" isTyping={true} isSpeaking={false} />
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-executive-navy flex items-center justify-center text-white text-xs font-bold shadow-md">
+                       {'A'}
+                     </div>
                  </div>
                  <div className="flex flex-col">
                    <span className="text-xs font-semibold text-executive-charcoal bg-white/80 px-2 py-0.5 rounded-full border border-executive-ash-light/40 mb-1 self-start">

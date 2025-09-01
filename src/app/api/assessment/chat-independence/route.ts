@@ -1,23 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractTokenFromHeader, authenticateToken } from '@/lib/auth';
 import { chatRequestSchema } from '@/lib/validation';
-import { 
+import {
   getIndependenceQuestionnaireData,
   generateFinalAnalysis
 } from '@/lib/ai-utils';
 import { getConnectionWithRetry } from '@/lib/database';
 
-// تابع ساده برای تحلیل پاسخ کاربر
-async function analyzeUserResponse(message: string, dimensions: any[]) {
+// تابع تحلیل پاسخ کاربر بر اساس کلمات کلیدی
+async function analyzeUserResponse(message: string, dimensions: any[], questionnaireData: any) {
   try {
-    console.log('🔍 Simple analysis for message:', message.substring(0, 50));
-    
-    const analysisResults = dimensions.map(dimension => ({
-      dimension: dimension.name || 'unknown',
-      score: Math.random() * 2 - 1, // امتیاز بین -1 تا 1
-      reasoning: `تحلیل ساده برای ${dimension.name || 'بعد ناشناخته'}`
-    }));
-    
+    console.log('🔍 Analyzing message for dimensions:', dimensions);
+    const analysisResults = dimensions.map(dimensionId => {
+      const dimensionKeywords = questionnaireData.analysis_keywords[dimensionId];
+      if (!dimensionKeywords) {
+        return {
+          dimension: `dimension_${dimensionId}`,
+          score: 0,
+          reasoning: `کلمات کلیدی برای این بعد یافت نشد.`
+        };
+      }
+
+      const lowerCaseMessage = message.toLowerCase();
+      const agreeMatch = dimensionKeywords.agree.some((keyword: string) => lowerCaseMessage.includes(keyword));
+      const disagreeMatch = dimensionKeywords.disagree.some((keyword: string) => lowerCaseMessage.includes(keyword));
+
+      let score = 0;
+      let reasoning = "پاسخ کاربر خنثی یا نامشخص بود.";
+
+      if (agreeMatch && !disagreeMatch) {
+        score = 2;
+        reasoning = "کاربر با این بعد موافقت کرد.";
+      } else if (disagreeMatch && !agreeMatch) {
+        score = 1;
+        reasoning = "کاربر با این بعد مخالفت کرد.";
+      }
+
+      // اعمال امتیازدهی معکوس در صورت نیاز
+      const reverseScoredIds = [1, 3, 5];
+      if (reverseScoredIds.includes(dimensionId)) {
+        if (score === 2) score = 1;
+        else if (score === 1) score = 2;
+      }
+      
+      return {
+        dimension: `dimension_${dimensionId}`,
+        score: score,
+        reasoning: reasoning
+      };
+    });
+
     return analysisResults;
   } catch (error) {
     console.error('❌ Analysis error:', error);
@@ -128,69 +160,28 @@ export async function POST(request: NextRequest) {
       console.error('⚠️ Failed to fetch user data:', error);
     }
 
-    // === Check Chat Messages Table Structure ===
-    console.log('🔍 Checking chat_messages table structure...');
-    try {
-      const [chatColumns] = await connection.execute('SHOW COLUMNS FROM chat_messages');
-      console.log('📊 chat_messages columns:', chatColumns);
-    } catch (error) {
-      console.error('❌ Failed to check chat_messages structure:', error);
-    }
-
     // === Find or Create Assessment ===
     console.log('📋 Finding/creating assessment...');
     let assessment;
     try {
       const questionnaireId = 1; // Hardcoded for Independence assessment
       
-      // Find the latest active assessment for this user and questionnaire
       console.log(`[DEBUG] Searching for active assessment for user_id: ${userId}, questionnaire_id: ${questionnaireId}`);
       const [assessments] = await connection.execute(
         'SELECT * FROM assessments WHERE user_id = ? AND questionnaire_id = ? AND completed_at IS NULL ORDER BY created_at DESC LIMIT 1',
         [userId, questionnaireId]
       );
-      console.log('[DEBUG] Found active assessments:', assessments);
       
       if (!Array.isArray(assessments) || assessments.length === 0) {
-        // No active assessment found. Check if one was recently completed to prevent loops.
-        console.log('[DEBUG] No active assessment found. Checking for completed ones.');
-        const [completedAssessments] = await connection.execute(
-          'SELECT * FROM assessments WHERE user_id = ? AND questionnaire_id = ? AND completed_at IS NOT NULL ORDER BY completed_at DESC LIMIT 1',
-          [userId, questionnaireId]
+        console.log('⚠️ No active assessment found. Creating a new one.');
+        const [result] = await connection.execute(
+          'INSERT INTO assessments (user_id, questionnaire_id, score, created_at) VALUES (?, ?, ?, NOW())',
+          [userId, questionnaireId, 0]
         );
-
-        if (Array.isArray(completedAssessments) && completedAssessments.length > 0) {
-          // A completed assessment exists. This means the user is sending a message after finishing.
-          // Re-send the final analysis to prompt the client to redirect.
-          const completedAssessment = completedAssessments[0] as any;
-          console.log('✅ Found completed assessment, re-sending final analysis for assessment:', completedAssessment.id);
-          
-          const finalAnalysis = generateFinalAnalysis(completedAssessment.score || 0, {}, questionnaireData);
-
-          return NextResponse.json({
-            success: true,
-            message: 'ارزیابی قبلاً تکمیل شده است',
-            data: {
-              type: "final_analysis",
-              messages: [{ character: "HR Bot", content: `این ارزیابی قبلاً تکمیل شده است.` }],
-              analysis: finalAnalysis,
-              session_id: session_id,
-            }
-          });
-        } else {
-          // No active and no completed assessment found. This is an error state,
-          // as start-independence should have been called. We create a new one to be robust.
-          console.log('⚠️ No assessment found at all. Creating a new one.');
-          const [result] = await connection.execute(
-            'INSERT INTO assessments (user_id, questionnaire_id, score, created_at) VALUES (?, ?, ?, NOW())',
-            [userId, questionnaireId, 0]
-          );
-          const newAssessmentId = (result as any).insertId;
-          const [newAssessments] = await connection.execute('SELECT * FROM assessments WHERE id = ?', [newAssessmentId]);
-          assessment = (newAssessments as any[])[0];
-        }
+        const newAssessmentId = (result as any).insertId;
+        const [newAssessments] = await connection.execute('SELECT * FROM assessments WHERE id = ?', [newAssessmentId]);
+        assessment = (newAssessments as any[])[0];
       } else {
-        // Active assessment was found.
         assessment = assessments[0] as any;
         console.log('✅ Found existing active assessment:', assessment.id);
       }
@@ -205,34 +196,14 @@ export async function POST(request: NextRequest) {
     let currentScore = assessment.score || 0;
     console.log('📊 Current score:', currentScore);
 
-    // === Save User Message (با بررسی نوع داده) ===
+    // === Save User Message ===
     console.log('💬 Saving user message...');
     try {
-      // بررسی ساختار chat_messages برای تشخیص نوع message_type
-      const [chatColumns] = await connection.execute('SHOW COLUMNS FROM chat_messages');
-      const messageTypeColumn = (chatColumns as any[]).find(col => col.Field === 'message_type');
-      console.log('📊 message_type column info:', messageTypeColumn);
-      
-      // تشخیص نوع مناسب برای message_type
-      let messageType = 'user';
-      if (messageTypeColumn?.Type?.includes('enum')) {
-        // اگر ENUM است، مقادیر مجاز را چک کنیم
-        const enumValues = messageTypeColumn.Type.match(/enum\((.*)\)/)?.[1];
-        console.log('📋 ENUM values for message_type:', enumValues);
-        
-        // احتمالاً مقادیر مجاز چیزی شبیه 'USER', 'AI', 'SYSTEM' است
-        if (enumValues?.includes("'USER'") || enumValues?.includes('"USER"')) {
-          messageType = 'USER';
-        } else if (enumValues?.includes("'user'") || enumValues?.includes('"user"')) {
-          messageType = 'user';
-        }
-      }
-      
       await connection.execute(
         'INSERT INTO chat_messages (assessment_id, user_id, message_type, content, character_name) VALUES (?, ?, ?, ?, ?)',
-        [assessment.id, userId, messageType, message, 'User']
+        [assessment.id, userId, 'user', message, 'User']
       );
-      console.log('✅ User message saved with type:', messageType);
+      console.log('✅ User message saved.');
     } catch (saveError: any) {
       console.error('❌ Failed to save user message:', saveError.message);
       return NextResponse.json(
@@ -246,8 +217,8 @@ export async function POST(request: NextRequest) {
     let responseCount, answeredQuestionIndex;
     try {
       const [userResponses] = await connection.execute(
-        'SELECT COUNT(*) as count FROM chat_messages WHERE assessment_id = ? AND message_type IN (?, ?)',
-        [assessment.id, 'user', 'USER'] // چک کردن هر دو حالت
+        'SELECT COUNT(*) as count FROM chat_messages WHERE assessment_id = ? AND message_type = ?',
+        [assessment.id, 'user']
       );
       responseCount = (userResponses as any)[0].count;
       answeredQuestionIndex = responseCount - 1;
@@ -260,15 +231,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // === Validate Index ===
-    if (answeredQuestionIndex < 0 || answeredQuestionIndex >= questionnaireData.scenario_parts.length) {
-      console.error(`❌ Invalid index: ${answeredQuestionIndex}`);
-      return NextResponse.json(
-        { success: false, message: 'ایندکس سوال نامعتبر است' },
-        { status: 400 }
-      );
-    }
-
     // === Analyze Response ===
     const currentPart = questionnaireData.scenario_parts[answeredQuestionIndex];
     const dimensionsToAnalyze = currentPart?.dimensions_to_analyze || [];
@@ -276,8 +238,8 @@ export async function POST(request: NextRequest) {
     let analysis = [];
     if (dimensionsToAnalyze.length > 0) {
       try {
-        analysis = await analyzeUserResponse(message, dimensionsToAnalyze);
-        console.log('✅ Analysis completed');
+        analysis = await analyzeUserResponse(message, dimensionsToAnalyze, questionnaireData);
+        console.log('✅ Analysis completed:', analysis);
       } catch (error) {
         console.error('❌ Analysis failed:', error);
       }
@@ -312,21 +274,7 @@ export async function POST(request: NextRequest) {
       // === Final Analysis ===
       console.log('🎯 Generating final analysis...');
       
-      let finalAnalysis;
-      try {
-        finalAnalysis = generateFinalAnalysis(currentScore, {}, questionnaireData);
-      } catch (error) {
-        console.error('❌ Final analysis failed:', error);
-        finalAnalysis = {
-          analysis: {
-            assessment: {
-              level: 'متوسط',
-              description: 'تحلیل نهایی بر اساس امتیاز کلی محاسبه شد.'
-            }
-          }
-        };
-      }
-
+      const finalAnalysis = generateFinalAnalysis(currentScore, {}, questionnaireData);
       const level = finalAnalysis.analysis.assessment?.level || 'نامشخص';
       const description = finalAnalysis.analysis.assessment?.description || 'تحلیل تکمیل شد';
       
@@ -358,61 +306,23 @@ export async function POST(request: NextRequest) {
       console.log('➡️ Continuing to next part...', nextPartIndex);
       
       const nextPart = questionnaireData.scenario_parts[nextPartIndex];
-      
-      if (!nextPart) {
-        console.error(`❌ Next part ${nextPartIndex} not found`);
-        return NextResponse.json(
-          { success: false, message: 'بخش بعدی سناریو یافت نشد' },
-          { status: 400 }
-        );
-      }
-
-      const dialogue = nextPart.dialogue || [{
-        character: 'HR Bot',
-        content: 'ادامه ارزیابی...'
-      }];
-
-      const personalizedDialogue = dialogue.map((item: any) => ({
+      const dialogue = nextPart.dialogue.map((item: any) => ({
         ...item,
-        content: item.content ? item.content.replace(/{user_name}/g, userName) : 'پیام خالی'
+        content: item.content.replace(/{user_name}/g, userName)
       }));
 
-      // === Save AI Messages (با تشخیص نوع مناسب) ===
+      // === Save AI Messages ===
       console.log('🤖 Saving AI messages...');
       try {
-        // تشخیص نوع مناسب برای AI messages
-        const [chatColumns] = await connection.execute('SHOW COLUMNS FROM chat_messages');
-        const messageTypeColumn = (chatColumns as any[]).find(col => col.Field === 'message_type');
-        
-        let aiMessageType = 'ai';
-        if (messageTypeColumn?.Type?.includes('enum')) {
-          const enumValues = messageTypeColumn.Type;
-          if (enumValues.includes("'AI'") || enumValues.includes('"AI"')) {
-            aiMessageType = 'AI';
-          } else if (enumValues.includes("'ASSISTANT'") || enumValues.includes('"ASSISTANT"')) {
-            aiMessageType = 'ASSISTANT';
-          } else if (enumValues.includes("'BOT'") || enumValues.includes('"BOT"')) {
-            aiMessageType = 'BOT';
-          }
-        }
-        
-        console.log('🔧 Using AI message type:', aiMessageType);
-        
-        for (const item of personalizedDialogue) {
+        for (const item of dialogue) {
           await connection.execute(
             'INSERT INTO chat_messages (assessment_id, user_id, message_type, content, character_name) VALUES (?, ?, ?, ?, ?)',
-            [assessment.id, userId, aiMessageType, item.content || '', item.character || 'HR Bot']
+            [assessment.id, userId, 'ai', item.content, item.character]
           );
         }
-        console.log('✅ AI messages saved successfully');
+        console.log('✅ AI messages saved.');
       } catch (aiSaveError: any) {
         console.error('❌ Failed to save AI messages:', aiSaveError.message);
-        console.error('🔍 AI Save Error details:', {
-          code: aiSaveError.code,
-          errno: aiSaveError.errno,
-          sqlMessage: aiSaveError.sqlMessage
-        });
-        // ادامه بدون ذخیره AI messages
       }
 
       console.log('✅ === SENDING NEXT PART ===');
@@ -421,7 +331,7 @@ export async function POST(request: NextRequest) {
         message: 'بخش بعدی سناریو شروع شد',
         data: {
           type: "ai_turn",
-          messages: personalizedDialogue,
+          messages: dialogue,
           current_score: currentScore,
           session_id: session_id,
           current_part: nextPartIndex
@@ -431,17 +341,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('💥 === CRITICAL ERROR ===');
-    console.error('Error name:', error.name);
     console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack?.substring(0, 500));
 
     return NextResponse.json(
       { 
         success: false, 
         message: 'خطای سرور. لطفاً دوباره تلاش کنید',
         debug: process.env.NODE_ENV === 'development' ? {
-          message: error.message,
-          name: error.name
+          message: error.message
         } : undefined
       },
       { status: 500 }

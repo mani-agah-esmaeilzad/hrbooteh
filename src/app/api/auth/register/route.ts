@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerSchema } from '@/lib/validation';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword, generateToken } from '@/lib/auth';
 import pool from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // اعتبارسنجی ورودی
     const validationResult = registerSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
@@ -32,12 +31,10 @@ export async function POST(request: NextRequest) {
       work_experience 
     } = validationResult.data;
 
-    // رمزنگاری پسورد
     const passwordHash = await hashPassword(password);
 
     const connection = await pool.getConnection();
     try {
-      // بررسی تکراری نبودن نام کاربری و ایمیل
       const [existingUsers] = await connection.execute(
         'SELECT id FROM users WHERE username = ? OR email = ?',
         [username, email]
@@ -53,7 +50,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ایجاد کاربر جدید
       const [result] = await connection.execute(
         `INSERT INTO users (
           username, email, password_hash, first_name, last_name, 
@@ -65,20 +61,32 @@ export async function POST(request: NextRequest) {
       const insertResult = result as any;
       const userId = insertResult.insertId;
 
-      // دریافت اطلاعات کاربر ایجاد شده
       const [newUserRows] = await connection.execute(
         'SELECT id, username, email, first_name, last_name, phone_number, age, education_level, work_experience, created_at FROM users WHERE id = ?',
         [userId]
       );
 
       if (Array.isArray(newUserRows) && newUserRows.length > 0) {
-        const newUser = newUserRows[0];
+        const newUser = newUserRows[0] as any;
+
+        // Generate token immediately after registration
+        const token = generateToken(newUser.id, newUser.username);
+
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7); // 7-day expiry
+
+        await connection.execute(
+          'INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+          [newUser.id, token, expiresAt]
+        );
 
         return NextResponse.json({
           success: true,
           message: 'حساب کاربری با موفقیت ایجاد شد',
           data: {
-            user: newUser
+            user: newUser,
+            token,
+            expiresAt
           }
         }, { status: 201 });
       } else {

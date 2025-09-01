@@ -31,9 +31,28 @@ const Index = () => {
     }
   ];
 
-  const handleStartAssessment = (questionnaireId: number) => {
+  const handleStartAssessment = async (questionnaireId: number) => {
     if (!user) {
       router.push('/login');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch('/api/self-assessment/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+
+      if (!data.completed) {
+        router.push('/self-assessment');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking self-assessment status:', error);
+      toast.error('خطا در بررسی وضعیت ارزیابی. لطفاً دوباره تلاش کنید.');
       return;
     }
 

@@ -70,6 +70,11 @@ export async function POST(request: NextRequest) {
       const insertResult = result as any;
       const assessmentId = insertResult.insertId;
 
+      // DEBUG LOGGING
+      console.log(`[DEBUG] Created assessment with ID: ${assessmentId}. Fetching it back to check completed_at.`);
+      const [debugResult] = await connection.execute('SELECT * FROM assessments WHERE id = ?', [assessmentId]);
+      console.log('[DEBUG] Fetched assessment:', debugResult);
+
       // ذخیره وضعیت اولیه در دیتابیس
       const initialState = {
         type: 'independence_scenario',

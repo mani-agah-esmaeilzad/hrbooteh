@@ -41,6 +41,7 @@ const IndependenceAssessment = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
   const [isIntroModalOpen, setIsIntroModalOpen] = useState(true);
   const [notificationSound, setNotificationSound] = useState<HTMLAudioElement | null>(null);
@@ -109,6 +110,7 @@ const IndependenceAssessment = () => {
       const data = await response.json();
       if (!data.success) throw new Error(data.message || 'Failed to start session');
       setSessionId(data.data.session_id);
+      setAssessmentId(data.data.assessment_id);
       setInitialAiMessages(data.data.messages || []);
     } catch (error) {
       toast.error("خطا در شروع ارزیابی. لطفاً صفحه را رفرش کنید.");
@@ -119,6 +121,11 @@ const IndependenceAssessment = () => {
 
   const handleSendMessage = async () => {
     if (!currentMessage.trim() || isTyping) return;
+
+    if (!sessionId) {
+      toast.error("جلسه چت هنوز شروع نشده است. لطفاً چند لحظه صبر کنید.");
+      return;
+    }
 
     const userMessage: ChatMessage = { type: 'user', content: currentMessage.trim() };
     setMessages(prev => [...prev, userMessage]);
@@ -143,7 +150,7 @@ const IndependenceAssessment = () => {
   };
 
   const handleServerResponse = (data: any) => {
-    if (data.type === 'assessment_complete' || data.message === 'ارزیابی تکمیل شد') {
+    if (data.type === 'final_analysis') {
       toast.success("ارزیابی تکمیل شد. در حال انتقال به صفحه نتایج...");
       localStorage.setItem('independence_results', JSON.stringify({ final_analysis: data.analysis || data }));
       setTimeout(() => router.push('/results'), 1500);

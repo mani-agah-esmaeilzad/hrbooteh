@@ -27,6 +27,7 @@ export const registerSchema = z.object({
 export const chatRequestSchema = z.object({
   message: z.string().min(1, 'پیام نمی‌تواند خالی باشد'),
   session_id: z.string().min(1, 'شناسه جلسه معتبر نیست'),
+  assessment_id: z.string().optional(),
 });
 
 // Schema برای پاسخ API

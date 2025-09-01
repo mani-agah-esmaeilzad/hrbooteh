@@ -57,11 +57,14 @@ export default function RegisterPage() {
                 throw new Error(data.message || 'خطا در ثبت‌نام');
             }
 
-            if (data.success) {
-                toast.success('حساب کاربری با موفقیت ایجاد شد');
-                router.push('/login');
+            if (data.success && data.data.token) {
+                toast.success('حساب کاربری با موفقیت ایجاد شد. در حال انتقال به پرسشنامه خودارزیابی...');
+                // Save token and user data
+                localStorage.setItem('token', data.data.token);
+                setUser(data.data.user);
+                router.push('/self-assessment');
             } else {
-                throw new Error('خطا در ثبت‌نام');
+                throw new Error(data.message || 'خطا در ثبت‌نام');
             }
         } catch (err: any) {
             console.error('Registration error:', err);

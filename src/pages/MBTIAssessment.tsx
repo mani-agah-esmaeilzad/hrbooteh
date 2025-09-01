@@ -289,7 +289,7 @@ const MBTIAssessment = () => {
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-luxury border border-executive-ash-light/30 overflow-hidden">
           {/* Messages */}
           <div className="h-96 overflow-y-auto p-6 space-y-4">
-            {messages.map((message, index) => (
+            {messages.filter(message => message.type !== 'system' && message.character !== 'System').map((message, index) => (
               <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                   message.type === 'user'

@@ -1,3 +1,7 @@
 {
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/api/self-assessment/status/route": "app/api/self-assessment/status/route.js",
+  "/independence/page": "app/independence/page.js",
+  "/api/ai-chat/message/route": "app/api/ai-chat/message/route.js",
+  "/api/ai-chat/start/route": "app/api/ai-chat/start/route.js"
 }

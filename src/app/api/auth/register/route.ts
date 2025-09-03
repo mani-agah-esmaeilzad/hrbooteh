@@ -55,7 +55,17 @@ export async function POST(request: NextRequest) {
           username, email, password_hash, first_name, last_name, 
           phone_number, age, education_level, work_experience
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [username, email, passwordHash, first_name, last_name, phone_number || null, age ? parseInt(age as string) || null : null, education_level || null, work_experience || null]
+        [
+          username, 
+          email, 
+          passwordHash, 
+          first_name, 
+          last_name, 
+          phone_number || null, 
+          age ? parseInt(age as string) : null, 
+          education_level || null, 
+          work_experience || null
+        ]
       );
 
       const insertResult = result as any;

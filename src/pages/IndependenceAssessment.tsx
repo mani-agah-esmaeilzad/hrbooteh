@@ -82,7 +82,28 @@ const IndependenceAssessment = () => {
 
   // --- FUNCTIONS ---
   const playNotification = () => {
-    notificationSound?.play().catch(err => console.error("Audio play failed:", err));
+    // Use Web Audio API to create a simple beep sound
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800; // Hz
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (err) {
+      console.log('Notification sound not available:', err);
+      // Fallback: no sound, just continue silently
+    }
   };
 
   const displayMessagesSequentially = (msgs: ServerMessage[]) => {
@@ -100,19 +121,30 @@ const IndependenceAssessment = () => {
 
   const startChatSession = async () => {
     setLoading(true);
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch('/api/assessment/start-independence', {
+      // Use new Mr. Ahmadi AI Chat API
+      const response = await fetch('/api/ai-chat/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({}),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userName: user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'کاربر'
+        }),
       });
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to start session');
-      setSessionId(data.data.session_id);
-      setAssessmentId(data.data.assessment_id);
-      setInitialAiMessages(data.data.messages || []);
+      if (!data.success) throw new Error(data.error || 'Failed to start session');
+      
+      setSessionId(data.sessionId);
+      // Create a message in the format expected by displayMessagesSequentially
+      const aiMessage = {
+        type: 'ai',
+        content: data.message,
+        character: 'آقای احمدی',
+        timestamp: data.timestamp,
+        id: 'initial'
+      };
+      setInitialAiMessages([aiMessage]);
     } catch (error) {
+      console.error('Error starting chat session:', error);
       toast.error("خطا در شروع ارزیابی. لطفاً صفحه را رفرش کنید.");
     } finally {
       setLoading(false);
@@ -133,28 +165,51 @@ const IndependenceAssessment = () => {
     setCurrentMessage('');
     setIsTyping(true);
 
-    const token = localStorage.getItem('token');
     try {
-      const response = await fetch('/api/assessment/chat-independence', {
+      // Use new Mr. Ahmadi AI Chat API
+      const response = await fetch('/api/ai-chat/message', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ message: messageToSend, session_id: sessionId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          sessionId: sessionId, 
+          message: messageToSend 
+        })
       });
       const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Server error');
-      handleServerResponse(data.data);
+      if (!data.success) throw new Error(data.error || data.message || 'Server error');
+      handleServerResponse(data);
     } catch (error) {
+      console.error('Error sending message:', error);
       toast.error("خطا در ارسال پیام.");
       setIsTyping(false);
     }
   };
 
   const handleServerResponse = (data: any) => {
+    console.log('Server response:', data); // Debug log
+    
     if (data.type === 'final_analysis') {
       toast.success("ارزیابی تکمیل شد. در حال انتقال به صفحه نتایج...");
       localStorage.setItem('independence_results', JSON.stringify({ final_analysis: data.analysis || data }));
       setTimeout(() => router.push('/results'), 1500);
+    } else if (data.message) {
+      // Handle single AI message response (from new API)
+      const aiMessage: ChatMessage = { 
+        type: 'ai', 
+        content: data.message, 
+        character: 'آقای احمدی' 
+      };
+      setMessages(prev => [...prev, aiMessage]);
+      playNotification();
+      setIsTyping(false);
+      
+      // Check if analysis should be triggered
+      if (data.shouldAnalyze) {
+        // Could trigger analysis endpoint here in future
+        console.log('Analysis should be triggered');
+      }
     } else if (data.messages && Array.isArray(data.messages)) {
+      // Handle multiple messages (for backward compatibility)
       displayMessagesSequentially(data.messages);
     } else {
       setIsTyping(false);

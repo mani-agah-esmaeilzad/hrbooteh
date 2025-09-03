@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تست چت آقای احمدی</title>
+    <style>
+        body {
+            font-family: 'Tahoma', Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .ai-message {
+            background-color: #e9ecef;
+            color: #333;
+            margin-right: auto;
+            text-align: right;
+        }
+        .analysis-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        input[type="text"] {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 تست چت آقای احمدی</h1>
+        
+        <div>
+            <button onclick="startChat()">شروع گفتگو جدید</button>
+            <button onclick="clearChat()">پاک کردن چت</button>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages"></div>
+        
+        <div>
+            <input type="text" id="messageInput" placeholder="پیام خود را بنویسید..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()" id="sendButton">ارسال</button>
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+        let isConversationEnded = false;
+
+        function showStatus(message, type = 'success') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = 'status';
+            }, 5000);
+        }
+
+        function addMessage(content, type = 'ai', isAnalysis = false) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = isAnalysis ? 'message analysis-message' : `message ${type}-message`;
+            messageDiv.textContent = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function startChat() {
+            try {
+                showStatus('در حال شروع گفتگو...', 'success');
+                
+                const response = await fetch('/api/ai-chat/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userName: 'کاربر تست'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSessionId = data.sessionId;
+                    isConversationEnded = false;
+                    clearChat();
+                    addMessage(data.message, 'ai');
+                    showStatus('گفتگو آغاز شد. آقای احمدی منتظر پاسخ شماست!', 'success');
+                    document.getElementById('sendButton').disabled = false;
+                    document.getElementById('messageInput').disabled = false;
+                } else {
+                    showStatus(`خطا: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`خطا در اتصال: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendMessage() {
+            if (!currentSessionId) {
+                showStatus('ابتدا گفتگو را شروع کنید', 'error');
+                return;
+            }
+
+            if (isConversationEnded) {
+                showStatus('گفتگو تمام شده است. برای شروع مجدد دکمه "شروع گفتگو جدید" را بزنید', 'error');
+                return;
+            }
+
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                showStatus('لطفاً پیامی بنویسید', 'error');
+                return;
+            }
+
+            // Add user message to chat
+            addMessage(message, 'user');
+            messageInput.value = '';
+            
+            // Disable send button during processing
+            document.getElementById('sendButton').disabled = true;
+            showStatus('در حال پردازش...', 'success');
+
+            try {
+                const response = await fetch('/api/ai-chat/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage(data.message, 'ai');
+                    
+                    if (data.shouldAnalyze) {
+                        showStatus('در حال تحلیل نهایی...', 'success');
+                        // Trigger analysis
+                        setTimeout(async () => {
+                            await triggerAnalysis();
+                        }, 2000);
+                    } else {
+                        showStatus('پیام ارسال شد', 'success');
+                        document.getElementById('sendButton').disabled = false;
+                    }
+                } else {
+                    showStatus(`خطا: ${data.error}`, 'error');
+                    document.getElementById('sendButton').disabled = false;
+                }
+            } catch (error) {
+                showStatus(`خطا در ارسال: ${error.message}`, 'error');
+                document.getElementById('sendButton').disabled = false;
+            }
+        }
+
+        async function triggerAnalysis() {
+            try {
+                const response = await fetch('/api/ai-chat/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage('🎯 تحلیل نهایی:\n\n' + data.analysis, 'ai', true);
+                    showStatus('گفتگو تمام شد و تحلیل نهایی آماده است!', 'success');
+                    isConversationEnded = true;
+                    document.getElementById('sendButton').disabled = true;
+                    document.getElementById('messageInput').disabled = true;
+                } else {
+                    showStatus(`خطا در تحلیل: ${data.error}`, 'error');
+                    document.getElementById('sendButton').disabled = false;
+                }
+            } catch (error) {
+                showStatus(`خطا در تحلیل: ${error.message}`, 'error');
+                document.getElementById('sendButton').disabled = false;
+            }
+        }
+
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = '';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            showStatus('برای شروع گفتگو با آقای احمدی، روی دکمه "شروع گفتگو جدید" کلیک کنید', 'success');
+            document.getElementById('sendButton').disabled = true;
+            document.getElementById('messageInput').disabled = true;
+        });
+    </script>
+</body>
+</html>

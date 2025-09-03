@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تست ثبت‌نام</title>
+    <style>
+        body {
+            font-family: 'Tahoma', Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], input[type="password"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 تست ثبت‌نام</h1>
+        
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="username">نام کاربری *</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">ایمیل *</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">رمز عبور *</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="first_name">نام *</label>
+                <input type="text" id="first_name" name="first_name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="last_name">نام خانوادگی *</label>
+                <input type="text" id="last_name" name="last_name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone_number">شماره تلفن</label>
+                <input type="text" id="phone_number" name="phone_number">
+            </div>
+            
+            <div class="form-group">
+                <label for="age">سن</label>
+                <input type="text" id="age" name="age">
+            </div>
+            
+            <div class="form-group">
+                <label for="education_level">سطح تحصیلات</label>
+                <select id="education_level" name="education_level">
+                    <option value="">انتخاب کنید</option>
+                    <option value="diploma">دیپلم</option>
+                    <option value="bachelor">کارشناسی</option>
+                    <option value="master">کارشناسی ارشد</option>
+                    <option value="phd">دکتری</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="work_experience">سابقه کار</label>
+                <select id="work_experience" name="work_experience">
+                    <option value="">انتخاب کنید</option>
+                    <option value="0-1">کمتر از 1 سال</option>
+                    <option value="1-3">1 تا 3 سال</option>
+                    <option value="3-5">3 تا 5 سال</option>
+                    <option value="5+">بیش از 5 سال</option>
+                </select>
+            </div>
+            
+            <button type="submit" id="submitBtn">ثبت‌نام</button>
+        </form>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const resultDiv = document.getElementById('result');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'در حال ثبت‌نام...';
+            resultDiv.style.display = 'none';
+            
+            const formData = new FormData(this);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                if (value.trim()) {
+                    data[key] = value.trim();
+                }
+            }
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ ثبت‌نام موفق!</h3>
+                        <p><strong>پیام:</strong> ${result.message}</p>
+                        <p><strong>کاربر:</strong> ${result.data.user.username}</p>
+                        <p><strong>ایمیل:</strong> ${result.data.user.email}</p>
+                        <p><strong>نام:</strong> ${result.data.user.first_name} ${result.data.user.last_name}</p>
+                        <p><strong>توکن:</strong> ${result.data.token.substring(0, 20)}...</p>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ خطا در ثبت‌نام</h3>
+                        <p>${result.message}</p>
+                        ${result.error ? `<p><strong>جزئیات:</strong> ${result.error}</p>` : ''}
+                    `;
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ خطای شبکه</h3>
+                    <p>خطا در اتصال به سرور: ${error.message}</p>
+                `;
+            }
+            
+            resultDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'ثبت‌نام';
+        });
+        
+        // Pre-fill form with test data
+        document.addEventListener('DOMContentLoaded', function() {
+            const testData = {
+                username: 'testuser' + Math.floor(Math.random() * 1000),
+                email: 'test' + Math.floor(Math.random() * 1000) + '@example.com',
+                password: 'test123456',
+                first_name: 'علی',
+                last_name: 'احمدی',
+                phone_number: '09121234567',
+                age: '25',
+                education_level: 'bachelor',
+                work_experience: '1-3'
+            };
+            
+            Object.keys(testData).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    element.value = testData[key];
+                }
+            });
+        });
+    </script>
+</body>
+</html>

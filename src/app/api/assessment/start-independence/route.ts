@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractTokenFromHeader, authenticateToken } from '@/lib/auth';
-import { 
-  getIndependenceQuestionnaireData, 
-  generateSessionId,
-  generateDialogue
-} from '@/lib/ai-utils';
-import pool, { getConnectionWithRetry } from '@/lib/database';
+import { ConversationManager } from '@/lib/ai-conversations';
+import { getConnectionWithRetry } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {
-    // استخراج و تایید توکن
+    // Authentication
     const authHeader = request.headers.get('authorization');
     const token = extractTokenFromHeader(authHeader || undefined);
 
@@ -38,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const userId = decodedToken.userId;
     
-        // دریافت اطلاعات کاربر برای شخصی‌سازی
+    // Get user information for personalization
     const connection = await getConnectionWithRetry();
     if (!connection) {
       throw new Error('Failed to get database connection');
@@ -53,70 +49,54 @@ export async function POST(request: NextRequest) {
       const userData = Array.isArray(users) && users.length > 0 ? users[0] as any : null;
       const userName = userData ? `${userData.first_name} ${userData.last_name}`.trim() : 'کاربر';
       
-      const questionnaireData = getIndependenceQuestionnaireData();
+      // Create new Mr. Ahmadi conversation session
+      const session = ConversationManager.createSession(userName, userId.toString());
       
-      // ایجاد session ID جدید
-      const sessionId = generateSessionId();
+      // Generate the opening message from Mr. Ahmadi
+      const openingLine = "سلام {user_name}، خیلی خوشحالم که اینجایی. ممنون که وقت گذاشتی. ببین، ما قراره یه پروژه خیلی خاص رو شروع کنیم؛ یه سرویس ویژه برای مشتری‌های تاپِ شرکت. نمی‌خوام یه چیز معمولی باشه. راستش رو بخوای، من از روش‌های همیشگی و فرآیندهای فعلی شرکت کمی خسته‌ام و حس می‌کنم این چیزا خلاقیت رو می‌کشه. من به توانایی و دیدگاه تو اعتماد کامل دارم. فرض کن من این پروژه رو به طور کامل به خودت سپرده‌ام. بودجه اولیه و اختیار تام هم با شماست. فقط یک بوم سفید و یک هدف مشخص. شما به عنوان مسئول این پروژه، فردا صبح اولین قدمی که برمی‌داری چیست؟ برایم از اولین حرکتت بگو.";
+      const finalOpening = openingLine.replace('{user_name}', userName);
+
+      // Add the opening message to session history
+      ConversationManager.addMessage(session.sessionId, 'model', finalOpening);
       
-      // استفاده از دیالوگ‌های از پیش تعریف شده
-      const firstPart = questionnaireData.scenario_parts[0];
-      
-      // ایجاد ارزیابی جدید در دیتابیس
+      // Create assessment record in database
       const [result] = await connection.execute(
-        'INSERT INTO assessments (user_id, questionnaire_id, score, max_score) VALUES (?, ?, ?, ?)',
-        [userId, 1, 0, questionnaireData.scoring_rules.max_score]
+        'INSERT INTO assessments (user_id, questionnaire_id, score, max_score, created_at) VALUES (?, ?, ?, ?, NOW())',
+        [userId, 1, 0, 6] // Max score is 6 for independence assessment
       );
 
       const insertResult = result as any;
       const assessmentId = insertResult.insertId;
-
-      // DEBUG LOGGING
-      console.log(`[DEBUG] Created assessment with ID: ${assessmentId}. Fetching it back to check completed_at.`);
-      const [debugResult] = await connection.execute('SELECT * FROM assessments WHERE id = ?', [assessmentId]);
-      console.log('[DEBUG] Fetched assessment:', debugResult);
-
-      // ذخیره وضعیت اولیه در دیتابیس
-      const initialState = {
-        type: 'independence_scenario',
-        score: 0,
-        current_question_index: 0,
-        answers: {},
-        history: []
+      
+      // Store session mapping in assessment_states for tracking
+      const sessionState = {
+        sessionId: session.sessionId,
+        type: 'mr_ahmadi_chat',
+        assessmentId: assessmentId,
+        userId: userId
       };
 
       await connection.execute(
         'INSERT INTO assessment_states (session_id, state_data, created_at) VALUES (?, ?, NOW())',
-        [sessionId, JSON.stringify(initialState)]
+        [session.sessionId, JSON.stringify(sessionState)]
       );
       
-      // شخصی‌سازی دیالوگ با نام کاربر
-      const personalizedDialogue = firstPart.dialogue.map(dialogue => ({
-        ...dialogue,
-        content: dialogue.content.replace(/{user_name}/g, userName)
-      }));
+      // Save opening message to database
+      await connection.execute(
+        'INSERT INTO chat_messages (assessment_id, user_id, message_type, content, character_name, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [assessmentId, userId, 'ai', finalOpening, 'آقای احمدی']
+      );
       
-      // ذخیره دیالوگ اولیه در دیتابیس
-      for (const dialogue of personalizedDialogue) {
-        await connection.execute(
-          'INSERT INTO chat_messages (assessment_id, user_id, message_type, content, character_name) VALUES (?, ?, ?, ?, ?)',
-          [assessmentId, userId, 'ai1', dialogue.content, dialogue.character]
-        );
-      }
-      
-      // بازگرداندن دیالوگ اولیه
-      const initialDialogue = {
-        type: "ai_turn",
-        messages: personalizedDialogue,
-        session_id: sessionId,
-        current_score: 0,
-        assessment_id: assessmentId,
-        current_part: 0
-      };
-
       return NextResponse.json({
         success: true,
-        message: 'سناریوی استقلال شروع شد',
-        data: initialDialogue
+        message: 'گفتگوی ارزیابی استقلال با آقای احمدی شروع شد',
+        data: {
+          type: "mr_ahmadi_chat",
+          sessionId: session.sessionId,
+          message: finalOpening,
+          assessmentId: assessmentId,
+          timestamp: new Date().toISOString()
+        }
       });
 
     } finally {
@@ -124,7 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('خطا در شروع سناریو:', error);
+    console.error('خطا در شروع گفتگوی ارزیابی:', error);
     return NextResponse.json(
       { 
         success: false, 

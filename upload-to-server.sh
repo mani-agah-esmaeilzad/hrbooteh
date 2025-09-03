@@ -4,7 +4,7 @@
 # This script uploads all files to the server
 
 SERVER="85.17.55.23"
-PORT="6579"
+PORT="22"
 USER="root"
 REMOTE_PATH="/opt/hrbooteh"
 

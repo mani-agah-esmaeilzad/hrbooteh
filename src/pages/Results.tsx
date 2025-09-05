@@ -145,6 +145,17 @@ const Results = () => {
         {/* Independence Assessment Results */}
         {analysisData && (
           <>
+            {analysisData.total_score && (
+                <div className="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                        <CheckCircle className="w-6 h-6 mr-3 text-green-500" />
+                        نمره نهایی آزمون استقلال
+                    </h2>
+                    <p className="text-4xl font-bold text-center text-indigo-600">{analysisData.total_score}</p>
+                    <p className="text-center text-gray-500 mt-2">نمره شما بین ۶ (وابسته) تا ۱۲ (مستقل) می‌باشد.</p>
+                </div>
+            )}
+
             <div className="bg-white p-6 rounded-2xl shadow-lg">
                 <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
                     <BarChart3 className="w-6 h-6 mr-3 text-indigo-600" />

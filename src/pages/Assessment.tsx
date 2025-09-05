@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Send, Shield, Users, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Send, Shield, Users, MessageCircle, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ const Assessment = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [assessmentStarted, setAssessmentStarted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasStartedAssessment = useRef(false);
 
@@ -89,18 +90,18 @@ const Assessment = () => {
   const getEndpoints = (questionnaireId: any) => {
     if (!questionnaireId || isNaN(Number(questionnaireId))) {
       console.warn('Invalid questionnaireId:', questionnaireId);
-      return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence` };
+      return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence`, finish: `/api/assessment/finish-independence` };
     }
     
     const id = Number(questionnaireId);
     
     switch (id) {
       case 1:
-        return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence` };
+        return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence`, finish: `/api/assessment/finish-independence` };
       case 2:
-        return { start: `/api/assessment/start-mbti`, chat: `/api/assessment/chat-mbti` };
+        return { start: `/api/assessment/start-mbti`, chat: `/api/assessment/chat-mbti`, finish: `/api/assessment/finish-mbti` }; // Assuming a finish endpoint for mbti
       default:
-        return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence` };
+        return { start: `/api/assessment/start-independence`, chat: `/api/assessment/chat-independence`, finish: `/api/assessment/finish-independence` };
     }
   };
 
@@ -119,6 +120,23 @@ const Assessment = () => {
       hasStartedAssessment.current = false;
     };
   }, [user?.id, currentQuestionnaire]);
+
+  useEffect(() => {
+    if (!assessmentStarted || loading) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(timer);
+          finishAssessment();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [assessmentStarted, loading]);
 
   const handleAiResponse = (data: any) => {
     const responseData = data.data || data;
@@ -157,6 +175,14 @@ const Assessment = () => {
       };
       setMessages(prev => [...prev, aiMessage]);
       setIsTyping(false);
+    } else if (responseData.aiResponse) {
+        const aiMessage: LocalChatMessage = {
+            type: 'ai',
+            content: responseData.aiResponse,
+            timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiMessage]);
+        setIsTyping(false);
     } else {
       setIsTyping(false);
       toast.error("پاسخ دریافتی از سرور معتبر نبود.");
@@ -268,6 +294,52 @@ const Assessment = () => {
     }
   };
 
+  const finishAssessment = async () => {
+    if (!sessionId) {
+      toast.error("خطای Session. امکان اتمام ارزیابی وجود ندارد.");
+      return;
+    }
+
+    toast.info("زمان شما به پایان رسید. در حال تحلیل نهایی...");
+    setIsTyping(true);
+
+    const token = localStorage.getItem('token');
+    const endpoints = getEndpoints(currentQuestionnaire);
+    if (!endpoints || !endpoints.finish) {
+        toast.error("خطای اتمام ارزیابی.");
+        setIsTyping(false);
+        return;
+    }
+
+    try {
+      const response = await fetch(endpoints.finish, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      handleAiResponse(data);
+
+    } catch (error) {
+      toast.error("خطا در تحلیل نهایی. لطفاً دوباره تلاش کنید.");
+      setIsTyping(false);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-executive-pearl via-white to-executive-silver/30 flex items-center justify-center">
@@ -342,12 +414,11 @@ const Assessment = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-executive-gold-light/20 px-3 py-1 rounded-lg border border-executive-gold/20">
-              <Shield className="w-3 h-3 text-executive-gold" />
-              <span className="text-xs font-bold text-executive-charcoal">امن</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-red-100/60 px-3 py-1.5 rounded-lg border border-red-200/80">
+              <Clock className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-bold text-red-700 tabular-nums">{formatTime(timeLeft)}</span>
             </div>
-            
             <Button
               onClick={handleLogout}
               variant="outline"
@@ -454,4 +525,4 @@ const Assessment = () => {
   );
 };
 
-export default Assessment;
+export default Assessment;default Assessment;default Assessment;
